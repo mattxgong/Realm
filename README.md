@@ -25,10 +25,10 @@ let y = "Hello";        // Declare an immutable variable y
 
 var tuple: (i32, f64, string) = (42, 3.141, "Answer");      // Declare a mutable tuple with an integer, a float, and a string
 
-var array: [bool, 5] = [true, false, true, false, true]     // Declare a mutable array of booleans with a fixed size of 5
-var list: [i32] = [1, 2, 3, 4]      // Declare a mutable list of integers with dynamic size
-var duplicateArray: ['d', 3]        // Declare a mutable array with duplicate values: ['d', 'd', 'd']
+var array: [bool, 5] = [true, false, true, false, true];     // Declare a mutable array of booleans with a fixed size of 5
+var list: [i32] = [1, 2, 3, 4];      // Declare a mutable list of integers with dynamic size
+var duplicateArray: ['d', 3];        // Declare a mutable array with duplicate values: ['d', 'd', 'd']
 
-print(array.3);       \\ Output: 5
-println(y);     \\ Output: Hello/n
+print(list[3]);       // Output: 4
+println(y);     // Output: Hello\n
 ```
