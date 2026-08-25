@@ -1,7 +1,7 @@
 ---
 title: Realm Implementation Plan
 description: Planning index for the Realm language, compiler, runtime, standard library, and developer tooling
-ms.date: 2026-08-23
+ms.date: 2026-08-25
 ms.topic: overview
 ---
 
@@ -37,19 +37,16 @@ contradictions and ambiguities:
   without defining target support, and does not list the used `string` type
 * Fixed arrays use `[bool, 5]`, dynamic lists use `[i32]`, and repetition uses
   `['d', 3]`, leaving type and value grammar ambiguous
-* One array declaration omits a semicolon even though other statements use one
-* `array.3` conflicts with the selected square-bracket indexing syntax
-* The comment says indexing the Boolean array produces `5`, which conflicts
-  with both its values and zero-based indexing
-* `Hello/n` is not conventional newline notation
 * Mutability, literal inference, integer overflow, tuple indexing, bounds
   behavior, negative indices, slicing, ownership, errors, and concurrency have
   no defined semantics
 
-The examples may be replaced. Realm syntax will be Rust-influenced, use
-semicolons, use zero-based square-bracket indexing, and support negative
-indexing and slicing. These choices still require a grammar and precise bounds
-semantics before they become accepted language rules.
+An older README revision also omitted a semicolon, used dotted indexing,
+claimed output `5`, and used `/n` for a newline. The current README has already
+corrected those four defects. The `RLM-0001` specifications formalize explicit
+semicolons, zero-based square-bracket indexing, negative indexing, and strict
+half-open slicing; they remain under review until the task receives owner
+approval.
 
 ## Planning Documents
 

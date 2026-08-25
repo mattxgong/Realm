@@ -1,7 +1,7 @@
 ---
 title: Realm Requirements and Assumptions
 description: Stable requirements, MVP scope, assumptions, open questions, and terminology for Realm
-ms.date: 2026-08-23
+ms.date: 2026-08-25
 ms.topic: reference
 ---
 
@@ -265,8 +265,8 @@ must preserve IDs.
 
 ## Assumptions
 
-* `ASM-001`: Source files use UTF-8 and line/column displays derive from UTF-8
-  byte offsets; Unicode normalization remains a Phase 0 decision
+* `ASM-001`: Source files use UTF-8, line and column displays derive from UTF-8
+  byte offsets, and identifiers use the Unicode policy resolved by `QUE-001`
 * `ASM-002`: The initial target is `x86_64-pc-windows-msvc`; cross-compilation
   and other triples are deferred
 * `ASM-003`: Full monomorphization is acceptable for the MVP despite compile-time
@@ -282,17 +282,25 @@ must preserve IDs.
 * `ASM-008`: The compiler remains implemented in Rust through initial releases;
   self-hosting is an experiment after language stabilization
 
+## Resolved Questions
+
+The language owner approved these `RLM-0001` dispositions on 2026-08-25:
+
+* `QUE-001`: Realm version 0 pins Unicode 17.0, uses NFC identifier identity,
+  excludes default-ignorable code points, and warns for version-matched UTS 39
+  confusable skeleton collisions and highly restrictive mixed-script defects
+* `QUE-002`: Negative indices and bounds count from the end. Slices use an
+  inclusive start, exclusive end, omitted bounds of zero and the sequence
+  length, strict range checks, and no clamping or reversal
+* `QUE-003`: Bounds and checked arithmetic failures use a non-catchable Realm
+  panic in every build profile. The panic runs initialized cleanups before
+  deterministic termination. `RLM-0002` owns the complete arithmetic matrix
+
 ## Unresolved Questions
 
 These questions are not permission to improvise during implementation. Their
 roadmap tasks must resolve them before dependent work starts.
 
-* `QUE-001`: Which Unicode normalization and confusable-identifier policy
-  balances usability, security, and source fidelity?
-* `QUE-002`: Do negative indices translate as `length + index`, and which
-  half-open slicing rules apply to omitted, negative, and reversed bounds?
-* `QUE-003`: Are bounds and arithmetic failures catchable exceptions, dedicated
-  panics, or aborts in optimized builds?
 * `QUE-004`: What exact unsafe operations, pointer types, and validity invariants
   are exposed to language users?
 * `QUE-005`: Which generic constraint model provides the MVP behavior without
