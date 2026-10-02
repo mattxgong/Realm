@@ -1,7 +1,7 @@
 ---
 title: Realm Requirements and Assumptions
 description: Stable requirements, MVP scope, assumptions, open questions, and terminology for Realm
-ms.date: 2026-08-25
+ms.date: 2026-08-27
 ms.topic: reference
 ---
 
@@ -295,6 +295,55 @@ The language owner approved these `RLM-0001` dispositions on 2026-08-25:
 * `QUE-003`: Bounds and checked arithmetic failures use a non-catchable Realm
   panic in every build profile. The panic runs initialized cleanups before
   deterministic termination. `RLM-0002` owns the complete arithmetic matrix
+
+The language owner approved these `RLM-0002` dispositions on 2026-08-25:
+
+* Realm version 0 has fixed `i8`, `i16`, `i32`, `i64`, `u8`, `u16`, `u32`,
+  `u64`, `f32`, and `f64` numeric primitives. It does not have `f16`,
+  pointer-sized integers, or 128-bit numeric primitives
+* `bool` has two values and canonical one-byte storage; `char` is a Unicode
+  scalar in four-byte storage; unit is a zero-sized singleton; never is
+  uninhabited and has no layout
+* Numeric literals are contextually typed before exact suffix selection and
+  `i32` or `f64` fallback. Exact suffix tokens compose with a numeric token only
+  when immediately contiguous; the lexer continues to emit separate tokens
+* Ordinary integer arithmetic, division, remainder, negation, and left shift
+  are checked. Their failure behavior is identical in debug and optimized
+  builds and uses the accepted non-catchable, cleanup-preserving Realm panic
+* `f32` and `f64` use strict IEEE 754 behavior in the default floating
+  environment. Ordinary code preserves subnormals and signed zero and does not
+  use fast-math, reassociation, approximation, or implicit mixed-format
+  promotion
+* Explicit casts use `expression as Type` and the closed checked matrix in
+  `docs/specifications/type-system.md`. Invalid runtime casts panic in every
+  build profile; required constants produce diagnostics
+* User structures and enums have nominal declaration identity. Tuples, arrays,
+  references, slice referents, and function pointers use the approved
+  structural identity components
+* Inference is confined to one function body. Local bindings and literals may
+  infer types, while every public signature is explicit, including `-> ()` for
+  a public unit-returning function
+* The implicit coercion set is closed to identity, never, shared reborrow,
+  array-reference to slice-reference, and matching function-item to function-
+  pointer coercions
+* Arrays and tuples are structural and preserve source order. Zero-length
+  arrays and arrays of zero-sized elements are valid; zero-sized aggregates
+  occupy zero data bytes while retaining semantic shape
+* `[T]` is an unsized slice referent and never appears by value. Slice values
+  place it behind `&` or `&mut`, and direct slice parameters use `&[T]` or
+  `&mut [T]`
+* Constants retain explicit types and use the bounded expression subset in the
+  type-system specification. String-valued constants and arbitrary function
+  calls are not constant-evaluable in version 0
+* `String` is a nominal owned UTF-8 prelude type with initial Windows x64
+  storage `{ptr, u64 len, u64 capacity}`. Direct indexing and bracket slicing
+  remain type errors
+* The initial representation and call-boundary table targets
+  `x86_64-pc-windows-msvc` but does not define source type identity, a stable
+  Realm-native ABI, a C ABI, or a cross-target promise
+
+The language owner accepted the `RLM-0002` contract and bounded validation
+evidence on 2026-08-27.
 
 ## Unresolved Questions
 

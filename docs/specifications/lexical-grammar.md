@@ -9,8 +9,9 @@ ms.topic: reference
 
 This specification is the normative lexical contract for Realm source files.
 It resolves the lexical parts of `RLM-0001`, `REQ-001`, `REQ-002`, and
-`REQ-005`. The grammar and conformance spike remain under review until the
-`RLM-0001` acceptance gate is complete.
+`REQ-005`. The grammar and conformance spike completed the `RLM-0001`
+acceptance gate. Later Phase 0 tasks may make owner-approved amendments where
+their semantic contracts expose ambiguity.
 
 The terms MUST, MUST NOT, SHOULD, SHOULD NOT, and MAY describe requirements on
 conforming Realm implementations. Source ranges are zero-based, half-open byte
@@ -211,8 +212,16 @@ fraction, and exponent digit sequences. `1.` is a floating-point literal.
 literal.
 
 Literal type suffixes and default types are specified by the Phase 0 type-system
-task. In this lexical grammar, an immediately following identifier is a
-separate token. Numeric value overflow is not a lexical error.
+specification. The lexer always emits a following identifier as a separate
+token. The parser may compose a numeric token with an immediately contiguous
+identifier token only when that identifier is an exact approved numeric suffix.
+Any whitespace, newline, comment, or other trivia between the tokens prevents
+suffix composition. Numeric value overflow is not a lexical error.
+
+For example, `1i32` produces adjacent `INTEGER` and `IDENTIFIER` tokens that the
+parser composes as one suffixed literal. `1 i32` produces the same token kinds
+with intervening trivia and is not a suffixed literal. The lexer does not merge
+either pair and does not classify suffix spelling.
 
 ```realm
 let decimal = 1_000;

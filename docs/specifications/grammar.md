@@ -13,8 +13,9 @@ and resolves `REQ-003` through `REQ-007`. It consumes tokens and trivia from
 validity, exception ABI, and concurrency behavior remain assigned to their
 later Phase 0 tasks, but their reserved words cannot be used as identifiers.
 
-The grammar and conformance spike remain under review until the `RLM-0001`
-acceptance gate is complete. The terms MUST, MUST NOT, SHOULD, SHOULD NOT, and
+The grammar and conformance spike completed the `RLM-0001` acceptance gate.
+Later Phase 0 tasks may make owner-approved amendments where their semantic
+contracts expose ambiguity. The terms MUST, MUST NOT, SHOULD, SHOULD NOT, and
 MAY describe requirements on conforming Realm implementations.
 
 ## Grammar Notation
@@ -85,6 +86,11 @@ with their closing brace and MUST NOT have a trailing semicolon. Structure
 fields and enum variants require trailing commas, including the last member.
 This rule keeps recovery stable when members are reordered or added.
 
+Every public function MUST include `return_type`, including `-> ()` when it
+returns unit. An omitted return type is permitted only on a private function and
+means `()`. It is never inferred from the function body. Parameter types and
+declared effects are explicit for public and private functions.
+
 Realm version 0 does not permit executable top-level statements. A later
 modules-and-packages specification determines which constant initializers are
 pure enough for module initialization.
@@ -131,8 +137,10 @@ const_expression  ::= expression
 
 `()` is the unit type. `(T,)` is a one-element tuple type, while `(T)` is a
 parenthesized type and therefore equivalent to `T`. Fixed arrays use `[T; N]`.
-Borrowed slices use `[T]`. Owned vectors and strings are nominal library types,
-not alternate bracket grammar.
+`[T]` is an unsized slice referent and cannot appear by value. Slice values use
+`&[T]` or `&mut [T]`; semantic analysis rejects bare `[T]` in bindings,
+parameters, returns, fields, tuple elements, and array elements. Owned vectors
+and strings are nominal library types, not alternate bracket grammar.
 
 Whether an expression is valid in an array length is a semantic constant-check
 performed after parsing.
@@ -206,12 +214,13 @@ assignment_tail   ::= assignment_operator assignment_expression
 assignment_operator ::= "=" | "+=" | "-=" | "*=" | "/=" | "%="
                       | "&=" | "|=" | "^=" | "<<=" | ">>="
 
-binary_expression ::= unary_expression
-                      (binary_operator unary_expression)*
+binary_expression ::= cast_expression
+                      (binary_operator cast_expression)*
 binary_operator   ::= "||" | "&&" | "|" | "^" | "&"
                     | "==" | "!=" | "<" | "<=" | ">" | ">="
                     | "<<" | ">>" | "+" | "-" | "*" | "/" | "%"
 
+cast_expression   ::= unary_expression ("as" type)?
 unary_expression  ::= unary_operator unary_expression | postfix_expression
 unary_operator    ::= "!" | "+" | "-" | "&" | "&" "mut"
                     | "move" | "await"
@@ -237,7 +246,13 @@ primary_expression ::= literal
                      | for_expression
                      | match_expression
 
-literal           ::= INTEGER | FLOAT | CHARACTER | STRING | "true" | "false"
+literal           ::= numeric_literal | CHARACTER | STRING | "true" | "false"
+numeric_literal   ::= INTEGER integer_or_float_suffix?
+                    | FLOAT float_suffix?
+integer_or_float_suffix ::= integer_suffix | float_suffix
+integer_suffix    ::= "i8" | "i16" | "i32" | "i64"
+                    | "u8" | "u16" | "u32" | "u64"
+float_suffix      ::= "f32" | "f64"
 parenthesized_expression ::= "(" expression ")"
 tuple_expression  ::= "(" expression "," ")"
                     | "(" expression "," expression
@@ -269,6 +284,17 @@ types.
 The dangling `else` belongs to the nearest unmatched `if`. Braces are mandatory
 for every `if`, `else`, loop, `while`, and `for` body.
 
+Each suffix terminal in `numeric_literal` denotes a separate `IDENTIFIER` token
+with that exact source spelling. The suffix token MUST be immediately
+contiguous with the preceding numeric token. The general permission for trivia
+between tokens does not apply at this composition boundary. Unknown suffixes or
+intervening trivia leave the identifier available to ordinary parsing and do
+not form a numeric literal.
+
+A cast has the form `expression as Type`. The cast layer accepts at most one
+`as` operation, so casts do not chain directly. Parentheses make each additional
+conversion explicit, as in `(value as i32) as i64`.
+
 ## Operator Precedence
 
 The parser MUST apply these levels from lowest binding power to highest:
@@ -286,8 +312,9 @@ The parser MUST apply these levels from lowest binding power to highest:
 |     9 | Left          | `<<`, `>>`                                 |
 |    10 | Left          | `+`, `-`                                   |
 |    11 | Left          | `*`, `/`, `%`                              |
-|    12 | Right         | Prefix `!`, `+`, `-`, `&`, `& mut`, `move`, `await` |
-|    13 | Left          | Calls, fields, indexing, and slicing       |
+|    12 | None          | `as Type`                                  |
+|    13 | Right         | Prefix `!`, `+`, `-`, `&`, `& mut`, `move`, `await` |
+|    14 | Left          | Calls, fields, indexing, and slicing       |
 
 `await` has prefix precedence in version 0. Equality and comparison operators
 do not chain. `a < b < c` is a syntax error; write `a < b && b < c`.
@@ -383,6 +410,18 @@ borrowed mutable sequence may produce an exclusive mutable slice; all other
 valid receivers produce a shared slice. Detailed loan conflicts and lifetime
 rules are defined by `RLM-0005`.
 
+Direct slice parameters spell the reference explicitly:
+
+```realm
+fn sum(input: &[i32]) -> i32 {
+  0
+}
+
+fn clear(output: &mut [i32]) -> () {
+  output[0] = 0;
+}
+```
+
 Direct `string[index]` is a type error. Direct bracket slicing on an owned UTF-8
 string is also a type error. String APIs expose explicit byte and Unicode-scalar
 iteration and may expose byte-range slicing that checks both endpoints are UTF-8
@@ -455,7 +494,7 @@ consumed at that offset.
 This source contains three independent syntax errors:
 
 ```realm
-fn recover(input: [i32]) -> i32 {
+fn recover(input: &[i32]) -> i32 {
     let first = input[0]
     let middle = input[1:3;
     return first + ;
@@ -489,10 +528,11 @@ owned strings are nominal library values rather than primitives.
 | README concern | Disposition |
 |---|---|
 | `[bool, 5]` fixed-array type | Replaced by `[bool; 5]` |
-| `[i32]` used for an owned list | Reserved for borrowed slices; `Vec<i32>` is deferred to `RLM-0004` |
+| `[i32]` used for an owned list | Reserved as an unsized slice referent; direct values use `&[i32]` or `&mut [i32]`, and `Vec<i32>` is deferred to `RLM-0004` |
 | `['d', 3]` repetition | Replaced by the expression `['d'; 3]` and type `[char; 3]` |
-| `f16` primitive claim | Deferred to `RLM-0002` and target-layout review |
-| Implicit string primitive | Owned strings remain nominal library values |
+| `f16` primitive claim | Deferred by the type-system specification; version 0 has no `f16` type or suffix |
+| Implicit string primitive | Replaced by the nominal prelude type `String` |
+| Unspecified numeric defaults | Unsuffixed integers default to `i32` and unsuffixed floating literals default to `f64` after contextual typing |
 | Semicolon, dotted index, output `5`, and `/n` claims | Superseded README revision; current source already uses `;`, `[3]`, `4`, and `\n` |
 
 ## Requirement Coverage
